@@ -30,14 +30,29 @@ def main():
         raise FileNotFoundError(f"Folder not found {SYNTHEA_FHIR_DIR}")
 
     jsonFiles = list(SYNTHEA_FHIR_DIR.glob("*.json"))
+
     if not jsonFiles:
         print("No JSON files found.")
         return
     else:
         print(f"Found {len(jsonFiles)} JSON files in {SYNTHEA_FHIR_DIR}")
+
+    priority = [
+        "practitioner",
+        "hospital",
+        "organization",
+        "location",
+    ]
     
-    for filePath in jsonFiles:
+    supportFiles = [file for file in jsonFiles if any(name in file.name.lower() for name in priority)]
+    regularFiles = [file for file in jsonFiles if file not in supportFiles]
+
+    for filePath in supportFiles:
         uploadFiles(filePath)
+    
+    for filePath in regularFiles:
+        uploadFiles(filePath)
+    
 
 
 if __name__ == "__main__":
