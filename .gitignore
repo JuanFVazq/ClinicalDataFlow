@@ -1,3 +1,6 @@
 # Synthea generated output
 data/synthea/fhir
 !data/synthea/fhir/.gitkeep
+
+data/raw/fhir_api
+!data/raw/fhir_api/.gitkeep
