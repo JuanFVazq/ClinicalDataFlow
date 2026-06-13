@@ -1,5 +1,5 @@
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import (col, explode, when, floor, datediff, current_date)
+from pyspark.sql.functions import (col, explode, when, floor, datediff, current_date, to_date)
 from pathlib import Path
 
 
@@ -9,8 +9,21 @@ RAW_PATIENT_PATH = PROJECT_ROOT/"data"/"raw"/"fhir_api"/"patient"
 def createSparkSesh() ->  SparkSession:
     return(SparkSession.builder.appName("Transformer").getOrCreate())
 
+def runDataValidation(patients) -> None:
+    rowCount = patients.count()
 
+    nullPatients = patients.filter(col("patient_id").isNull()).count()
+    duplicatePatients = (patients.groupBy("patient_id").count().filter(col("count") > 1).count())
+    invalidBirthPatients = patients.filter(col("birth_date") > current_date()).count()
 
+    if nullPatients > 0:
+        raise ValueError(f"Data Validation failed: {nullPatients} Null Patient IDs Found")
+
+    if duplicatePatients > 0:
+        raise ValueError(f"Data Validation failed: {duplicatePatients} Duplicate Patient IDs Found")
+    
+    if invalidBirthPatients > 0:
+        raise ValueError(f"Data Validation failed: {invalidBirthPatients} Invalid Birth Dates Found Found")
 
 
 
@@ -35,7 +48,8 @@ def main():
     )
     patients = patients.withColumn("deceased_flag", when(col("deceased_datetime").isNotNull(), True).otherwise(False))
 
-    patients = patients.withColumn("age", floor(datediff(current_date(), col("birth_date"))/365.25))
+    patients = patients.withColumn("age", floor(datediff(when(col("deceased_datetime").isNotNull(),to_date(col("deceased_datetime")))
+                                                         .otherwise(current_date()),col("birth_date"))/365.25))
     
     patients = patients.withColumn("age_group", when(col("age") < 18, "0-17")
                                    .when((col("age") >= 18) & (col("age") <= 34), "18-34")
@@ -48,7 +62,7 @@ def main():
     
     patients.printSchema()
     patients.show(10)
-
+    runDataValidation(patients)
 
     print(spark.version)
     spark.stop()
