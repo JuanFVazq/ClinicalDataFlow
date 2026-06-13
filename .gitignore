@@ -6,4 +6,4 @@ data/raw/fhir_api/*
 !data/raw/fhir_api/.gitkeep
 
 data/processed/patient/*
-data/processed/patient/.gitkeep
+!data/processed/patient/.gitkeep
