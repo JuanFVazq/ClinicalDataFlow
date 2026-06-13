@@ -1,16 +1,20 @@
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import (col, explode, when, floor, datediff, current_date, to_date)
 from pathlib import Path
-
+import os
+os.environ["HADOOP_HOME"] = "C:\\hadoop"
+os.environ["hadoop.home.dir"] = "C:\\hadoop"
+os.environ["PATH"] = os.environ["PATH"] + ";C:\\hadoop\\bin"
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 RAW_PATIENT_PATH = PROJECT_ROOT/"data"/"raw"/"fhir_api"/"patient"
+OUTPUT_PATH = PROJECT_ROOT/"data"/"processed"/"patient"
+
 
 def createSparkSesh() ->  SparkSession:
     return(SparkSession.builder.appName("Transformer").getOrCreate())
 
 def runDataValidation(patients) -> None:
-    rowCount = patients.count()
 
     nullPatients = patients.filter(col("patient_id").isNull()).count()
     duplicatePatients = (patients.groupBy("patient_id").count().filter(col("count") > 1).count())
@@ -59,11 +63,12 @@ def main():
                                    )
     
     
-    
+    print("Hadoop version:", spark._jvm.org.apache.hadoop.util.VersionInfo.getVersion())
     patients.printSchema()
     patients.show(10)
     runDataValidation(patients)
 
+    patients.write.mode("overwrite").parquet(str(OUTPUT_PATH))
     print(spark.version)
     spark.stop()
 
