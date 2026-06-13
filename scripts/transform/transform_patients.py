@@ -1,5 +1,5 @@
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import (col, explode)
+from pyspark.sql.functions import (col, explode, when, floor, datediff, current_date)
 from pathlib import Path
 
 
@@ -33,8 +33,22 @@ def main():
         col("patient.maritalStatus.text").alias("marital_status"),
         col("patient.deceasedDateTime").alias("deceased_datetime")
     )
+    patients = patients.withColumn("deceased_flag", when(col("deceased_datetime").isNotNull(), True).otherwise(False))
+
+    patients = patients.withColumn("age", floor(datediff(current_date(), col("birth_date"))/365.25))
+    
+    patients = patients.withColumn("age_group", when(col("age") < 18, "0-17")
+                                   .when((col("age") >= 18) & (col("age") <= 34), "18-34")
+                                   .when((col("age") >= 35) & (col("age") <= 49), "35-49")
+                                   .when((col("age") >= 50) & (col("age") <= 64), "50-64")
+                                   .otherwise("65+")
+                                   )
+    
+    
+    
     patients.printSchema()
     patients.show(10)
+
 
     print(spark.version)
     spark.stop()
