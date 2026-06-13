@@ -4,3 +4,4 @@ data/synthea/fhir
 
 data/raw/fhir_api
 !data/raw/fhir_api/.gitkeep
+.env
